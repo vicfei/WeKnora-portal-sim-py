@@ -1,0 +1,33 @@
+<header class="topbar">
+  <a class="brand" href="/kb">
+    <div class="brand-mark">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M12 3 L20 12 L12 21 L4 12 Z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M8 14 L11 11 L13 13 L16 9" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="16" cy="9" r="1.1" fill="#fff"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <div class="brand-name">智研助手</div>
+      <div class="brand-sub">Research Copilot</div>
+    </div>
+  </a>
+  <nav class="topnav">
+    <a href="/kb" class="{% if Nav == "kb" %}active{% endif %}">知识库</a>
+    <a href="/chat" class="{% if Nav == "chat" %}active{% endif %}">智能问答</a>
+    <a href="/admin" class="quiet" title="v2 空间授权管理台（管理员）">管理后台</a>
+  </nav>
+  <div class="topbar-right">
+    <div class="user-chip">
+      <div class="avatar">{{Avatar}}</div>
+      <span class="user-name">{{UserName}}</span>
+    </div>
+    <form method="post" action="/logout" class="inline">
+      <button class="icon-btn" title="退出登录">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </button>
+    </form>
+  </div>
+</header>

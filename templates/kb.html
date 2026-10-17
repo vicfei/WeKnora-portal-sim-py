@@ -1,0 +1,302 @@
+{% include "_begin.html" %}{% include "_topnav.html" %}
+<style>
+/* ============ 知识库视图（原型 01-01 view-kb） ============ */
+.kb-shell{height:calc(100vh - 57px);overflow-y:auto;position:relative;z-index:1}
+.kb-shell::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(37,99,235,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(37,99,235,.022) 1px,transparent 1px),
+    radial-gradient(circle at 12% 8%,rgba(14,165,233,.10) 0%,transparent 38%),
+    radial-gradient(circle at 88% 92%,rgba(124,58,237,.08) 0%,transparent 42%);
+  background-size:28px 28px,28px 28px,100% 100%,100% 100%;
+  mask-image:radial-gradient(circle at 50% 30%,#000 0%,transparent 88%);
+}
+.kb-content{max-width:1080px;margin:0 auto;padding:22px 28px 40px;position:relative;z-index:1}
+
+.kb-hero{
+  position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;
+  padding:18px 24px;border-radius:var(--r-2xl);
+  background:linear-gradient(135deg,#0B1220 0%,#1E2A44 60%,#0F1E3C 100%);
+  border:1px solid rgba(37,99,235,.32);
+  box-shadow:0 8px 28px rgba(15,23,42,.18),inset 0 1px 0 rgba(255,255,255,.06);
+  margin-bottom:24px;gap:18px;flex-wrap:wrap;
+}
+.kb-hero-grid{
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(37,99,235,.10) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(37,99,235,.10) 1px,transparent 1px);
+  background-size:18px 18px;
+  mask-image:radial-gradient(circle at 80% 50%,#000 0%,transparent 70%);
+  pointer-events:none;
+}
+.kb-hero::before{
+  content:"";position:absolute;top:-40px;right:-40px;width:160px;height:160px;
+  background:radial-gradient(circle,rgba(37,99,235,.30) 0%,transparent 70%);pointer-events:none;
+}
+.kb-hero::after{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:2.5px;
+  background:linear-gradient(180deg,var(--cyan),var(--gold),var(--violet));border-radius:2px;
+}
+.kb-hero-left{display:flex;align-items:center;gap:14px;position:relative;z-index:1;min-width:0}
+.kb-hero-ic{
+  width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,var(--cyan),var(--gold));
+  display:grid;place-items:center;flex-shrink:0;
+  box-shadow:0 6px 18px rgba(37,99,235,.45),inset 0 1px 0 rgba(255,255,255,.35);
+}
+.kb-hero-name{font-family:var(--serif);font-size:15px;font-weight:700;color:#fff;letter-spacing:.3px}
+.kb-hero-sub{font-size:11px;color:#7DD3FC;margin-top:3px;letter-spacing:.3px}
+.kb-hero-stats{display:flex;align-items:center;gap:14px;position:relative;z-index:1;flex-wrap:wrap}
+.kb-hero-stat{text-align:center;min-width:64px}
+.kb-hero-stat-num{font-family:var(--mono);font-size:18px;font-weight:600;color:#fff;letter-spacing:.2px}
+.kb-hero-stat-label{font-size:10px;color:#94A3B8;margin-top:4px;letter-spacing:1.2px;text-transform:uppercase;font-weight:600}
+.kb-hero-sep{width:1px;height:32px;background:rgba(255,255,255,.12)}
+
+.kb-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 2px;gap:10px;flex-wrap:wrap}
+.kb-section-title{display:flex;align-items:center;gap:10px;font-family:var(--serif);font-size:14px;font-weight:600;color:var(--ink);letter-spacing:.3px}
+.kb-section-bar{width:3px;height:14px;border-radius:2px;background:linear-gradient(180deg,var(--cyan),var(--gold));box-shadow:0 0 6px rgba(37,99,235,.4)}
+.kb-section-count{
+  font-family:var(--mono);font-size:11px;font-weight:700;color:var(--gold);
+  background:rgba(37,99,235,.10);padding:2px 7px;border-radius:9px;border:1px solid rgba(37,99,235,.22);
+}
+.head-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.kb-search{
+  display:flex;align-items:center;gap:8px;width:220px;padding:7px 12px;
+  background:var(--bg-elevated);border:1px solid var(--line);border-radius:9px;
+  transition:all .2s var(--ease-out);
+}
+.kb-search:focus-within{border-color:rgba(37,99,235,.45);box-shadow:0 0 0 4px rgba(37,99,235,.08),0 2px 8px rgba(37,99,235,.08)}
+.kb-search svg{color:var(--muted);flex-shrink:0}
+.kb-search input{flex:1;font-size:12.5px;color:var(--ink);background:transparent;border:none!important;padding:0!important}
+.kb-search input::placeholder{color:var(--muted-2)}
+.kb-tabs{display:flex;gap:2px;padding:3px;background:var(--bg-sunken);border-radius:9px;border:1px solid var(--line-soft)}
+.kb-tab{padding:6px 14px;border-radius:7px;font-size:12.5px;font-weight:500;color:var(--muted);transition:all .2s var(--ease-out);font-family:inherit}
+.kb-tab:hover{color:var(--ink-3)}
+.kb-tab.active{background:var(--bg-elevated);color:var(--ink);font-weight:600;
+  box-shadow:0 1px 2px rgba(15,23,42,.06),0 0 0 1px rgba(37,99,235,.12)}
+
+.kb-modules{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.kb-module{
+  --accent-1:#2563EB;--accent-2:#0EA5E9;
+  position:relative;overflow:hidden;background:var(--bg-elevated);
+  border:1px solid var(--line);border-radius:var(--r-2xl);padding:18px 18px 14px;
+  transition:all .3s var(--ease-out);cursor:pointer;box-shadow:var(--shadow-card);
+  display:flex;flex-direction:column;min-height:158px;
+  animation:fadeUp .4s var(--ease-out) both;text-decoration:none;color:inherit;
+}
+.kb-module[data-group="personal"]{--accent-1:#0EA5E9;--accent-2:#2563EB}
+.kb-module[data-group="team"]{--accent-1:#7C3AED;--accent-2:#4F46E5}
+.kb-module[data-group="public"]{--accent-1:#059669;--accent-2:#0EA5E9}
+.kb-module[data-group="shared"]{--accent-1:#D97706;--accent-2:#DC2626}
+.kb-module::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:2.5px;
+  background:linear-gradient(180deg,var(--accent-1),var(--accent-2));opacity:0;transition:opacity .25s;
+}
+.kb-module:hover{transform:translateY(-2px);border-color:rgba(37,99,235,.25);
+  box-shadow:0 8px 28px rgba(15,23,42,.08),0 0 0 1px rgba(37,99,235,.10),0 0 24px rgba(37,99,235,.06)}
+.kb-module:hover::before{opacity:1}
+.kb-module-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.kb-module-ic{
+  width:38px;height:38px;border-radius:11px;color:#fff;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--accent-1),var(--accent-2));flex-shrink:0;
+  box-shadow:0 4px 12px rgba(0,0,0,.10),inset 0 1px 0 rgba(255,255,255,.30);
+  transition:transform .3s var(--ease-spring);
+}
+.kb-module:hover .kb-module-ic{transform:scale(1.08) rotate(-3deg)}
+.kb-module-num{
+  font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--muted-2);
+  letter-spacing:1.5px;background:var(--bg-sunken);padding:3px 7px;border-radius:5px;
+  border:1px solid var(--line-soft);
+}
+.kb-module-body{flex:1;min-width:0}
+.kb-module-title{
+  font-family:var(--serif);font-size:15px;font-weight:600;color:var(--ink);
+  letter-spacing:.3px;margin-bottom:6px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+}
+.role-tag{font-size:10px;font-weight:600;padding:2px 8px;border-radius:9px;letter-spacing:.3px;border:1px solid}
+.role-tag.owner{color:#B45309;background:rgba(217,119,6,.10);border-color:rgba(217,119,6,.28)}
+.role-tag.admin{color:#B91C1C;background:rgba(220,38,38,.10);border-color:rgba(220,38,38,.25)}
+.role-tag.contributor{color:#2563EB;background:rgba(37,99,235,.10);border-color:rgba(37,99,235,.25)}
+.role-tag.viewer{color:var(--ink-3);background:var(--bg-sunken);border-color:var(--line)}
+.kb-module-desc{
+  font-size:12px;color:var(--muted);line-height:1.6;letter-spacing:.15px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.kb-module-foot{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+.kb-module-tag{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted);font-weight:500}
+.kb-module-tag .tag-dot{width:5px;height:5px;border-radius:50%;background:var(--accent-1);box-shadow:0 0 5px var(--accent-1)}
+.kb-module-go{
+  display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:600;color:var(--ink-3);
+  padding:4px 9px 4px 11px;border-radius:13px;background:var(--bg-sunken);border:1px solid var(--line);
+  transition:all .2s var(--ease-out);
+}
+.kb-module:hover .kb-module-go{
+  color:#fff;background:linear-gradient(135deg,var(--accent-1),var(--accent-2));
+  border-color:transparent;box-shadow:0 3px 10px rgba(37,99,235,.20);
+}
+.kb-module-go svg{transition:transform .2s}
+.kb-module:hover .kb-module-go svg{transform:translateX(1px)}
+
+@media (max-width:1080px){.kb-modules{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:680px){
+  .kb-modules{grid-template-columns:1fr}
+  .kb-content{padding:14px 14px 30px}
+  .kb-hero{padding:14px 16px}
+  .kb-search{width:140px}
+}
+</style>
+
+<main class="kb-shell">
+  <div class="kb-content">
+
+    <div id="hero" class="kb-hero" hidden>
+      <div class="kb-hero-grid"></div>
+      <div class="kb-hero-left">
+        <div class="kb-hero-ic">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M12 3 L20 12 L12 21 L4 12 Z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M8 14 L11 11 L13 13 L16 9" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="16" cy="9" r="1.1" fill="#fff"/>
+          </svg>
+        </div>
+        <div>
+          <div class="kb-hero-name">资管统一知识库</div>
+          <div class="kb-hero-sub">个人 · 团队 · 公司公共 · 共享，一站式可见（权限由平台侧裁决）</div>
+        </div>
+      </div>
+      <div class="kb-hero-stats">
+        <div class="kb-hero-stat"><div class="kb-hero-stat-num" id="statDocs">–</div><div class="kb-hero-stat-label">文档总数</div></div>
+        <div class="kb-hero-sep"></div>
+        <div class="kb-hero-stat"><div class="kb-hero-stat-num" id="statKbs">–</div><div class="kb-hero-stat-label">知识库</div></div>
+        <div class="kb-hero-sep"></div>
+        <div class="kb-hero-stat"><div class="kb-hero-stat-num" id="statSpaces">–</div><div class="kb-hero-stat-label">可见空间</div></div>
+      </div>
+    </div>
+
+    <div class="kb-section-head">
+      <div class="kb-section-title">
+        <span class="kb-section-bar"></span>我的知识库
+        <span class="kb-section-count" id="kbCount">…</span>
+      </div>
+      <div class="head-tools">
+        <div class="kb-search">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="q" placeholder="搜索名称 / 空间…" autocomplete="off">
+        </div>
+        <div class="kb-tabs" id="tabs"></div>
+      </div>
+    </div>
+
+    <div id="state"></div>
+    <div id="groups" class="kb-modules"></div>
+
+  </div>
+</main>
+
+<script>
+// 分组只是"呈现"服务端字段（space_type/my_role）——本页不做任何权限判断
+const GROUPS = {
+  personal:{label:'个人', icon:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'},
+  team:    {label:'团队', icon:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'},
+  public:  {label:'公司公共', icon:'<path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/>'},
+  shared:  {label:'共享给我', icon:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>'},
+};
+const ROLE_LABEL = {owner:'本人', admin:'空间管理员', contributor:'可编辑', viewer:'只读'};
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function classify(it){
+  if (it.shared) return it.space_type === 'all' ? 'public' : 'shared';
+  if (it.space_type === 'personal') return 'personal';
+  if (it.space_type === 'all') return 'public';
+  return 'team';
+}
+let ITEMS = [], curTab = 'all';
+
+function stateHtml(kind, title, desc, action=''){
+  const icons = {
+    loading:'<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+    empty:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+    error:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+  };
+  return `<div class="state ${kind==='error'?'error':''}"><div class="state-ic">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icons[kind]||''}</svg>
+  </div><h3>${esc(title)}</h3><p>${esc(desc)}</p>${action}</div>`;
+}
+
+function renderTabs(){
+  const counts = {all:ITEMS.length};
+  ITEMS.forEach(it=>{const k=classify(it); counts[k]=(counts[k]||0)+1;});
+  document.getElementById('tabs').innerHTML =
+    ['all',...Object.keys(GROUPS)].filter(k=>k==='all'||counts[k])
+      .map(k=>`<button class="kb-tab ${curTab===k?'active':''}" data-tab="${k}">${k==='all'?'全部':GROUPS[k].label}</button>`).join('');
+  document.getElementById('tabs').querySelectorAll('.kb-tab').forEach(b=>
+    b.addEventListener('click',()=>{curTab=b.dataset.tab; renderTabs(); renderList();}));
+}
+
+function cardHtml(it){
+  const g = classify(it), meta = GROUPS[g];
+  const role = it.my_role || it.permission || '';
+  return `<a class="kb-module" data-group="${g}" href="/kb/${esc(it.id)}" style="animation-delay:${Math.min(renderList.i*0.04,.24)}s">
+    <div class="kb-module-head">
+      <div class="kb-module-ic"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${meta.icon}</svg></div>
+      <div class="kb-module-num">${it.knowledge_count??0} 份</div>
+    </div>
+    <div class="kb-module-body">
+      <div class="kb-module-title">${esc(it.name)}${role?`<span class="role-tag ${esc(role)}">${ROLE_LABEL[role]||esc(role)}</span>`:''}</div>
+      <div class="kb-module-desc">${esc(it.tenant_name||'')}</div>
+    </div>
+    <div class="kb-module-foot">
+      <span class="kb-module-tag"><span class="tag-dot"></span>${meta.label}${it.shared?' · 组织共享':''}</span>
+      <span class="kb-module-go">进入<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></span>
+    </div>
+  </a>`;
+}
+
+function renderList(){
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  renderList.i = 0;
+  const cards = ITEMS.filter(it=>{
+    if (curTab!=='all' && classify(it)!==curTab) return false;
+    if (q && !(`${it.name} ${it.tenant_name||''}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
+  document.getElementById('kbCount').textContent = cards.length;
+  if (!cards.length){
+    document.getElementById('groups').innerHTML = '';
+    document.getElementById('state').innerHTML = ITEMS.length
+      ? stateHtml('empty','没有匹配的知识库','换个关键词，或切换分组试试')
+      : stateHtml('empty','暂无可见的知识库','登录账号尚未被授予任何空间，请联系管理员在 v2 管理台授权');
+    return;
+  }
+  document.getElementById('state').innerHTML = '';
+  document.getElementById('groups').innerHTML = cards.map(it=>{renderList.i++; return cardHtml(it);}).join('');
+}
+document.getElementById('q').addEventListener('input', renderList);
+
+(async () => {
+  document.getElementById('state').innerHTML = stateHtml('loading','正在加载知识库…','数据来自 WeKnora portal 聚合接口');
+  try {
+    const r = await fetch('/api/v1/portal/knowledge-bases');
+    if (r.status === 401){
+      document.getElementById('state').innerHTML = stateHtml('error','登录已过期','会话已失效，请重新登录',
+        '<a class="btn btn-primary" href="/">重新登录</a>');
+      return;
+    }
+    const j = await r.json();
+    if (!r.ok || j.success === false) throw new Error(j.error?.message || ('HTTP '+r.status));
+    ITEMS = j.data || [];
+    document.getElementById('state').innerHTML = '';
+    document.getElementById('hero').hidden = false;
+    const docs = ITEMS.reduce((s,it)=>s+(it.knowledge_count||0),0);
+    document.getElementById('statDocs').textContent = docs.toLocaleString();
+    document.getElementById('statKbs').textContent = ITEMS.length;
+    document.getElementById('statSpaces').textContent = new Set(ITEMS.map(it=>it.tenant_name||it.id)).size;
+    renderTabs();
+    renderList();
+  } catch (e) {
+    document.getElementById('state').innerHTML = stateHtml('error','加载失败', e.message + '（WeKnora 服务可能暂不可用）',
+      '<button class="btn" onclick="location.reload()">重试</button>');
+  }
+})();
+</script>
+{% include "_end.html" %}

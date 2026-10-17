@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智研助手 · v2 管理台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F4F6FB;--bg-elevated:#FFFFFF;--bg-sunken:#EBF0F7;
+  --ink:#0B1220;--ink-3:#475574;--muted:#6A7791;--muted-2:#95A1B8;
+  --line:#E1E7F0;--line-soft:#EEF2F7;--line-strong:#CBD5E5;
+  --gold:#2563EB;--cyan:#0EA5E9;--violet:#7C3AED;
+  --crimson:#DC2626;--emerald:#059669;--amber:#D97706;
+  --grad-brand:linear-gradient(135deg,var(--cyan) 0%,var(--gold) 50%,var(--violet) 100%);
+  --grad-text:linear-gradient(90deg,var(--cyan),var(--gold) 50%,var(--violet));
+  --serif:'Sora','Noto Sans SC','PingFang SC',sans-serif;
+  --sans:'Noto Sans SC','PingFang SC',-apple-system,sans-serif;
+  --mono:'JetBrains Mono','SF Mono','Menlo',monospace;
+  --shadow-card:0 1px 0 rgba(255,255,255,.6) inset,0 1px 2px rgba(15,23,42,.04),0 6px 18px rgba(37,99,235,.06);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select{font-family:inherit;outline:none;border:1px solid var(--line-strong);border-radius:8px;padding:7px 10px;background:var(--bg-elevated);color:var(--ink);font-size:12.5px}
+.nav{
+  display:flex;align-items:center;gap:14px;padding:0 24px;height:56px;
+  background:linear-gradient(135deg,#0B1220 0%,#1E2A44 100%);color:#E8EDF7;
+  position:relative;
+}
+.nav::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--gold),var(--violet))}
+.brand-mark{width:30px;height:30px;background:var(--grad-brand);display:grid;place-items:center;border-radius:9px;box-shadow:0 4px 14px rgba(37,99,235,.45)}
+.brand-name{font-family:var(--serif);font-weight:700;font-size:14.5px;color:#fff}
+.brand-sub{font-size:9.5px;letter-spacing:2.2px;text-transform:uppercase;font-weight:700;background:var(--grad-text);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.nav .note{font-size:11.5px;color:#7DD3FC;margin-left:auto}
+.nav a{color:#94A3B8;font-size:12px;text-decoration:none}
+.nav a:hover{color:#fff}
+.container{max-width:1060px;margin:22px auto;padding:0 16px 40px}
+.card{background:var(--bg-elevated);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow-card)}
+h3{font-family:var(--serif);font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+h3 .bar{width:3px;height:14px;border-radius:2px;background:linear-gradient(180deg,var(--cyan),var(--gold))}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.muted{color:var(--muted);font-size:12px}
+.hint{color:var(--muted-2);font-size:11px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line-soft);text-align:left;font-size:12.5px;vertical-align:middle}
+th{color:var(--muted);font-weight:600;font-size:11px;letter-spacing:.8px;text-transform:uppercase}
+tr:hover td{background:rgba(37,99,235,.03)}
+.st{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:9px;border:1px solid}
+.st.active{color:#047857;background:rgba(5,150,105,.10);border-color:rgba(5,150,105,.25)}
+.st.pending{color:#B45309;background:rgba(217,119,6,.10);border-color:rgba(217,119,6,.28)}
+.st.revoked,.st.expired{color:#B91C1C;background:rgba(220,38,38,.10);border-color:rgba(220,38,38,.25)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:8px;font-size:12px;font-weight:500;border:1px solid var(--line);background:var(--bg-elevated);color:var(--ink-3);transition:all .15s}
+.btn:hover{border-color:rgba(37,99,235,.4);color:var(--gold)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-primary{color:#fff;font-weight:600;border:none;background:var(--grad-brand);box-shadow:0 4px 14px rgba(37,99,235,.32)}
+.btn-primary:hover{color:#fff;transform:translateY(-1px)}
+.btn-danger{color:var(--crimson)}
+.btn-danger:hover{color:var(--crimson);border-color:rgba(220,38,38,.4);background:rgba(220,38,38,.06)}
+#msg{margin:10px 0;padding:9px 13px;border-radius:9px;font-size:12.5px;display:none}
+#msg.ok{display:block;background:rgba(5,150,105,.08);color:#047857;border:1px solid rgba(5,150,105,.25)}
+#msg.bad{display:block;background:rgba(220,38,38,.06);color:#B91C1C;border:1px solid rgba(220,38,38,.25)}
+.edit-cell input,.edit-cell select{padding:4px 6px;font-size:11.5px;border-radius:6px}
+.gap-note{font-size:11.5px;color:var(--muted);background:var(--bg-sunken);border:1px dashed var(--line-strong);border-radius:9px;padding:9px 12px;margin-top:12px;line-height:1.7}
+@media (max-width:720px){.container{padding:0 10px 30px}.card{padding:14px}}
+</style>
+</head>
+<body>
+<div class="nav">
+  <div class="brand-mark">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path d="M12 3 L20 12 L12 21 L4 12 Z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+      <path d="M8 14 L11 11 L13 13 L16 9" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="16" cy="9" r="1.1" fill="#fff"/>
+    </svg>
+  </div>
+  <div>
+    <div class="brand-name">v2 空间授权管理台</div>
+    <div class="brand-sub">Grant Console</div>
+  </div>
+  <span class="note">经 portal-sim 反代直连 WeKnora /api/v1/admin/*（权限在平台侧裁决）</span>
+  <a href="/kb">← 返回门户</a>
+</div>
+<div class="container">
+
+<div class="card">
+  <h3><span class="bar"></span>管理员登录（WeKnora 系统管理员）</h3>
+  <div class="row">
+    <input id="email" value="review-v2-admin@test.local" placeholder="管理员邮箱" style="min-width:220px">
+    <input id="pwd" type="password" value="review123456" placeholder="密码">
+    <button class="btn btn-primary" onclick="login()">登录</button>
+    <span id="loginState" class="muted">未登录</span>
+  </div>
+</div>
+
+<div class="card">
+  <h3><span class="bar"></span>空间管理</h3>
+  <div class="row">
+    <input id="spName" placeholder="空间名称" style="min-width:200px">
+    <select id="spType"><option value="team">team（团队）</option><option value="all">all（全员公共）</option></select>
+    <button class="btn btn-primary" onclick="createSpace()">创建空间</button>
+    <span class="hint">治理冻结：平台建空间无真人 Owner，成员只经 grants 流转</span>
+  </div>
+  <table id="spaces"><thead><tr><th>ID</th><th>名称</th><th>类型</th><th>状态</th></tr></thead><tbody></tbody></table>
+</div>
+
+<div class="card">
+  <h3><span class="bar"></span>授权管理</h3>
+  <div class="row">
+    <input id="gUum" placeholder="工号（可为未建号用户 = 预授权）" style="min-width:250px">
+    <select id="gTenant"></select>
+    <select id="gRole"><option value="viewer">viewer 只读</option><option value="contributor">contributor 可编辑</option><option value="admin">admin 空间管理员</option></select>
+    <input id="gDays" type="number" placeholder="有效天数（空=永久）" style="width:150px">
+    <button class="btn btn-primary" onclick="saveGrant()">保存授权</button>
+  </div>
+  <div class="row">
+    <input id="gFilter" placeholder="按工号过滤…" oninput="renderGrants()">
+    <select id="gSpaceFilter" onchange="renderGrants()"><option value="">全部空间</option></select>
+    <span class="hint">回收 / 到期后，用户下一请求即失效（membership 逐请求校验）</span>
+  </div>
+  <table id="grants"><thead><tr><th>工号</th><th>空间</th><th>角色</th><th>状态</th><th>有效期至</th><th>操作</th></tr></thead><tbody></tbody></table>
+  <div class="gap-note">📋 审计查询页待 WeKnora 侧实现设计稿 §3.1-9 的 <span class="muted">GET /api/v1/admin/audit</span>（系统级审计端点）后接入；现有按租户 <span class="muted">/tenants/{id}/audit-log</span> 对系统管理员不可跨租户访问（实测 403）。</div>
+</div>
+
+<div id="msg"></div>
+</div>
+
+<script>
+let TOKEN = '', SPACES = [], ALL = [], editing = null;
+const $ = id => document.getElementById(id);
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function msg(t, ok){ const m=$('msg'); m.className=ok?'ok':'bad'; m.textContent=t; setTimeout(()=>{ if(m.textContent===t) m.className=''; }, 6000); }
+async function api(m,u,b,raw){
+  const r = await fetch(u,{method:m,headers:Object.assign({'Content-Type':'application/json'},TOKEN?{Authorization:'Bearer '+TOKEN}:{}),body:b?JSON.stringify(b):undefined});
+  const j = await r.json().catch(()=>({}));
+  if (!r.ok || j.success===false) throw new Error((j.error&&j.error.message)||j.error||('HTTP '+r.status));
+  return j.data;
+}
+async function login(){
+  try{
+    const j = await (await fetch('/api/v1/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('email').value,password:$('pwd').value})})).json();
+    if (!j.token) throw new Error(j.error?.message||'登录失败');
+    TOKEN = j.token; $('loginState').textContent = '已登录'; msg('登录成功', true);
+    loadAll();
+  }catch(e){ msg('登录失败：'+(e.message||'凭据错误')); }
+}
+async function loadAll(){ await Promise.all([loadSpaces(), loadGrants()]); }
+
+async function loadSpaces(){
+  SPACES = await api('GET','/api/v1/admin/spaces') || [];
+  const head = SPACES.length ? '' : '<tr><td colspan="4" class="muted">（空）</td></tr>';
+  $('spaces').querySelector('tbody').innerHTML = SPACES.map(s=>`<tr>
+    <td class="muted" style="font-family:var(--mono)">${esc(s.id)}</td><td>${esc(s.name)}</td>
+    <td>${esc(s.space_type||'team')}</td><td>${esc(s.status||'active')}</td></tr>`).join('') || head;
+  $('gTenant').innerHTML = SPACES.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}（${esc(s.space_type||'')}）</option>`).join('');
+  $('gSpaceFilter').innerHTML = '<option value="">全部空间</option>'+SPACES.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');
+}
+async function createSpace(){
+  try{ await api('POST','/api/v1/admin/spaces',{name:$('spName').value,space_type:$('spType').value}); msg('空间已创建', true); loadAll(); }
+  catch(e){ msg(e.message); }
+}
+
+async function loadGrants(){ ALL = await api('GET','/api/v1/admin/grants') || []; editing = null; renderGrants(); }
+function spaceName(tid){ const s = SPACES.find(x=>String(x.id)===String(tid)); return s?s.name:('空间 '+tid); }
+
+function renderGrants(){
+  if (!TOKEN) return;
+  const q = $('gFilter').value.trim(), sp = $('gSpaceFilter').value;
+  const list = ALL.filter(g=>(!q || String(g.uum_user_id).includes(q)) && (!sp || String(g.tenant_id)===sp));
+  $('grants').querySelector('tbody').innerHTML = (list.length ? list : []).map(g=>{
+    if (editing === g.id) return `<tr class="edit-cell"><td>${esc(g.uum_user_id)}</td><td>${esc(spaceName(g.tenant_id))}</td>
+      <td><select id="eRole">${['viewer','contributor','admin'].map(r=>`<option value="${r}" ${g.role===r?'selected':''}>${r}</option>`).join('')}</select></td>
+      <td><span class="st ${esc(g.status)}">${esc(g.status)}</span></td>
+      <td><input type="date" id="eDate" value="${g.valid_until?String(g.valid_until).slice(0,10):''}"></td>
+      <td>
+        <button class="btn btn-primary" onclick="saveEdit('${esc(g.id)}')">保存</button>
+        <button class="btn" onclick="cancelEdit()">取消</button>
+      </td></tr>`;
+    const ops = [
+      g.status==='pending' ? `<button class="btn" onclick="approve('${esc(g.id)}')">审批</button>` : '',
+      g.status==='active' ? `<button class="btn" onclick="startEdit('${esc(g.id)}')">编辑</button>` : '',
+      g.status!=='revoked' && g.status!=='expired' ? `<button class="btn btn-danger" onclick="revoke('${esc(g.id)}')">回收</button>` : '',
+    ].filter(Boolean).join(' ');
+    return `<tr>
+      <td>${esc(g.uum_user_id)}</td>
+      <td>${esc(spaceName(g.tenant_id))}</td>
+      <td>${esc(g.role)}</td>
+      <td><span class="st ${esc(g.status)}">${esc(g.status)}</span></td>
+      <td>${g.valid_until?new Date(g.valid_until).toLocaleString('zh-CN'):'<span class="muted">永久</span>'}</td>
+      <td>${ops||'<span class="hint">—</span>'}</td></tr>`;
+  }).join('') || '<tr><td colspan="6" class="muted">（无匹配授权）</td></tr>';
+}
+function startEdit(id){ editing = id; renderGrants(); }
+function cancelEdit(){ editing = null; renderGrants(); }
+async function saveEdit(id){
+  const body = {};
+  const role = $('eRole').value; if (role) body.role = role;
+  const d = $('eDate').value; if (d) body.valid_until = new Date(d+'T23:59:59+08:00').toISOString();
+  if (!body.role && !body.valid_until){ msg('未修改任何字段'); return; }
+  try{ await api('PUT','/api/v1/admin/grants/'+id, body); msg('已保存（生效由平台侧逐请求裁决）', true); await loadGrants(); }
+  catch(e){ msg('保存失败：'+e.message); }
+}
+async function saveGrant(){
+  const body = {uum_user_id:$('gUum').value.trim(), tenant_id:Number($('gTenant').value), role:$('gRole').value, activate_now:true};
+  const d = $('gDays').value; if (d) body.valid_until = new Date(Date.now()+Number(d)*86400000).toISOString();
+  try{ await api('POST','/api/v1/admin/grants', body); msg('授权已保存', true); $('gUum').value=''; $('gDays').value=''; loadGrants(); }
+  catch(e){ msg(e.message); }
+}
+async function approve(id){ try{ await api('PUT',`/api/v1/admin/grants/${id}/approve`); msg('已审批通过', true); loadGrants(); }catch(e){ msg(e.message); } }
+async function revoke(id){ if(!confirm('确认回收？用户下一请求即失效。'))return; try{ await api('DELETE',`/api/v1/admin/grants/${id}`); msg('已回收', true); loadGrants(); }catch(e){ msg(e.message); } }
+</script>
+</body>
+</html>

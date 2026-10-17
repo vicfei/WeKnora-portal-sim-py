@@ -1,0 +1,739 @@
+{% include "_begin.html" %}{% include "_topnav.html" %}
+<style>
+/* ============ 问答视图（原型 01-01 view-chat 三栏） ============ */
+.chat-shell{display:grid;grid-template-columns:232px 1fr 312px;height:calc(100vh - 57px);position:relative;z-index:1}
+
+/* ── 侧栏 ── */
+.sidebar{background:var(--bg-elevated);border-right:1px solid var(--line);padding:16px 0;overflow-y:auto;display:flex;flex-direction:column}
+.sidebar-section{padding:0 12px;margin-bottom:18px}
+.sidebar-label{font-size:10px;font-weight:600;letter-spacing:1.5px;color:var(--muted-2);text-transform:uppercase;padding:0 12px 8px}
+.new-chat-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px 12px;
+  border-radius:var(--r-lg);font-size:13px;font-weight:600;color:#fff;letter-spacing:.3px;
+  background:var(--grad-brand);background-size:200% 200%;background-position:0% 50%;
+  box-shadow:0 4px 14px rgba(37,99,235,.32),0 1px 2px rgba(15,23,42,.08),inset 0 1px 0 rgba(255,255,255,.35);
+  transition:all .25s var(--ease-out);margin-bottom:8px;position:relative;overflow:hidden;
+}
+.new-chat-btn:hover{transform:translateY(-1px);background-position:100% 50%;
+  box-shadow:0 8px 22px rgba(37,99,235,.42),0 2px 4px rgba(15,23,42,.08),inset 0 1px 0 rgba(255,255,255,.4)}
+.history-list{padding:0 12px}
+.history-item{
+  padding:9px 30px 9px 12px;border-radius:7px;font-size:12.5px;color:var(--muted);cursor:pointer;
+  transition:all .2s var(--ease-out);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  border-left:2.5px solid transparent;position:relative;letter-spacing:.1px;
+}
+.history-item:hover{background:linear-gradient(90deg,rgba(37,99,235,.06) 0%,rgba(37,99,235,.02) 100%);color:var(--ink-3);transform:translateX(1px)}
+.history-item.active{background:linear-gradient(90deg,rgba(37,99,235,.12) 0%,transparent 100%);color:var(--ink);font-weight:600;border-left-color:var(--gold)}
+.history-item .time{font-family:var(--mono);font-size:10px;color:var(--muted-2);display:block;margin-top:2px}
+.pin-flag{display:none;font-size:9px;font-weight:600;color:var(--gold);background:rgba(37,99,235,.14);padding:1px 5px;border-radius:7px;margin-right:6px;letter-spacing:.3px;vertical-align:1px}
+.history-item.pinned{color:var(--ink-3);font-weight:500;border-left-color:var(--gold)}
+.history-item.pinned .pin-flag{display:inline-block}
+.hist-actions{
+  position:absolute;right:5px;top:50%;transform:translateY(-50%);display:flex;gap:1px;opacity:0;
+  transition:opacity .15s;padding-left:18px;border-radius:0 6px 6px 0;
+  background:linear-gradient(90deg,transparent 0%,var(--bg-elevated) 40%);
+}
+.history-item:hover .hist-actions,.history-item.pinned .hist-actions{opacity:1}
+.hist-act{width:22px;height:22px;display:grid;place-items:center;border-radius:4px;color:var(--muted);transition:all .15s;border:none;cursor:pointer}
+.hist-act:hover{background:rgba(255,255,255,.7);color:var(--ink)}
+.hist-act.pin:hover,.history-item.pinned .hist-act.pin{color:var(--gold)}
+.hist-act.del:hover{color:var(--crimson);background:rgba(220,38,38,.1)}
+.history-item.removing{opacity:0;transform:translateX(-12px);pointer-events:none;transition:all .2s}
+
+/* ── 主区 ── */
+.chat-main{background:var(--bg);display:flex;flex-direction:column;overflow:hidden;position:relative;min-width:0}
+.chat-main::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(37,99,235,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(37,99,235,.025) 1px,transparent 1px),
+    radial-gradient(circle at 20% 0%,rgba(37,99,235,.06) 0%,transparent 50%),
+    radial-gradient(circle at 80% 100%,rgba(124,58,237,.05) 0%,transparent 50%);
+  background-size:32px 32px,32px 32px,100% 100%,100% 100%;
+}
+.chat-header{
+  display:flex;align-items:center;justify-content:space-between;padding:14px 28px;
+  background:rgba(255,255,255,.7);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);
+  position:relative;z-index:2;
+}
+.chat-title{display:flex;align-items:center;gap:12px;min-width:0}
+.chat-title h1{font-family:var(--serif);font-size:17px;font-weight:600;color:var(--ink);letter-spacing:.3px}
+.chat-title .scope-tag{
+  display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;letter-spacing:.5px;
+  padding:2px 8px;border-radius:10px;color:var(--gold);
+  background:linear-gradient(135deg,rgba(14,165,233,.12),rgba(37,99,235,.12));border:1px solid rgba(37,99,235,.25);
+  max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.chat-title .scope-tag.empty{color:var(--muted-2);background:var(--bg-sunken);border-color:var(--line)}
+
+.conversation{flex:1;overflow-y:auto;padding:28px 0;position:relative;z-index:1}
+.msg-wrap{max-width:780px;margin:0 auto;padding:0 28px}
+.msg{margin-bottom:28px;animation:fadeUp .5s var(--ease-out)}
+
+.welcome{text-align:center;padding:24px 0 36px;margin-bottom:8px;animation:fadeUp .6s var(--ease-out)}
+.welcome-emblem{
+  width:62px;height:62px;margin:0 auto 20px;background:var(--grad-brand);border-radius:18px;
+  display:grid;place-items:center;color:#fff;
+  box-shadow:0 10px 28px rgba(37,99,235,.35),0 2px 4px rgba(15,23,42,.08),inset 0 1px 0 rgba(255,255,255,.5);
+  animation:emblemFloat 5s ease-in-out infinite;
+}
+@keyframes emblemFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.welcome h2{font-family:var(--serif);font-size:25px;font-weight:600;color:var(--ink);margin-bottom:8px;letter-spacing:.6px}
+.welcome h2 .accent{background:var(--grad-text);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-weight:700}
+.welcome p{font-size:13px;color:var(--muted);max-width:480px;margin:0 auto;letter-spacing:.15px}
+
+.msg-row{display:flex;gap:14px}
+.msg-row.user{flex-direction:row-reverse}
+.msg-avatar{
+  width:34px;height:34px;border-radius:9px;flex-shrink:0;display:grid;place-items:center;
+  font-family:var(--serif);font-size:13px;font-weight:600;
+}
+.msg-avatar.ai{background:var(--grad-brand-h);color:#fff;box-shadow:0 3px 12px rgba(37,99,235,.35),inset 0 1px 0 rgba(255,255,255,.35)}
+.msg-avatar.human{background:linear-gradient(135deg,#1E2A44,#0B1220);color:#fff;box-shadow:0 2px 8px rgba(11,18,32,.22),inset 0 1px 0 rgba(255,255,255,.12)}
+.msg-content{flex:1;min-width:0}
+.msg-name{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.msg-row.user .msg-name{justify-content:flex-end}
+.msg-name .role{font-size:10px;font-weight:500;color:var(--muted);padding:1px 6px;background:var(--bg-sunken);border-radius:8px}
+.msg-bubble{padding:14px 18px;border-radius:var(--r-lg);font-size:13.5px;line-height:1.7;position:relative;word-break:break-word}
+.msg-row.ai .msg-bubble{
+  background:linear-gradient(180deg,#FFFFFF 0%,#FCFDFE 100%);border:1px solid var(--line);
+  border-top-left-radius:3px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 4px 16px rgba(37,99,235,.05);white-space:pre-wrap;
+}
+.msg-row.ai .msg-bubble::before{
+  content:"";position:absolute;left:-1px;top:-1px;width:16px;height:16px;
+  border-top:2px solid var(--gold);border-left:2px solid var(--gold);border-top-left-radius:3px;pointer-events:none;
+}
+.msg-row.user .msg-bubble{
+  background:linear-gradient(135deg,var(--gold) 0%,var(--violet) 100%);color:#fff;border:none;
+  border-top-right-radius:3px;box-shadow:0 6px 20px rgba(37,99,235,.28),0 1px 2px rgba(15,23,42,.06);white-space:pre-wrap;
+}
+.msg-bubble .cursor{display:inline-block;width:7px;height:15px;background:var(--gold);vertical-align:-2px;margin-left:2px;animation:pulseDot 1s steps(2) infinite}
+.citations{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;padding-top:14px;position:relative}
+.cite-label{font-size:11px;color:var(--muted);align-self:center;margin-right:4px;letter-spacing:.2px}
+.cite-chip{
+  display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-3);padding:4px 9px;
+  border-radius:6px;background:var(--bg-sunken);border:1px solid var(--line);cursor:pointer;
+  transition:all .18s var(--ease-out);text-decoration:none;
+}
+.cite-chip:hover{background:#fff;border-color:rgba(37,99,235,.45);color:var(--ink);transform:translateY(-1px);box-shadow:0 3px 10px rgba(37,99,235,.1)}
+.cite-chip .src{
+  font-family:var(--mono);font-size:9px;font-weight:700;width:16px;height:16px;border-radius:4px;
+  background:linear-gradient(135deg,var(--cyan),var(--gold));color:#fff;display:grid;place-items:center;
+}
+.msg-actions{display:flex;gap:4px;margin-top:8px;opacity:0;transition:opacity .2s}
+.msg:hover .msg-actions{opacity:1}
+.msg-action{padding:4px 8px;font-size:11px;color:var(--muted);border-radius:4px;display:flex;align-items:center;gap:4px}
+.msg-action:hover{background:var(--bg-sunken);color:var(--ink)}
+
+/* ── 输入区 ── */
+.composer-wrap{padding:16px 28px 20px;background:linear-gradient(180deg,transparent 0%,var(--bg) 30%);position:relative;z-index:2}
+.composer{
+  max-width:780px;margin:0 auto;background:linear-gradient(180deg,#FFFFFF 0%,#FCFDFE 100%);
+  border:1px solid var(--line);border-radius:16px;padding:6px;
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 4px 14px rgba(37,99,235,.06),0 24px 50px rgba(15,23,42,.07);
+  transition:all .25s var(--ease-out);position:relative;
+}
+.composer:focus-within{border-color:rgba(37,99,235,.5);box-shadow:0 0 0 4px rgba(37,99,235,.1),0 4px 24px rgba(37,99,235,.15),0 24px 50px rgba(15,23,42,.07)}
+.composer-tools{display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.toggle-pill{
+  display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-3);font-weight:500;
+  padding:5px 11px;border-radius:14px;background:var(--bg-sunken);border:1px solid var(--line);
+  cursor:pointer;transition:all .2s var(--ease-out);letter-spacing:.2px;
+}
+.toggle-pill:hover{border-color:rgba(37,99,235,.4);color:var(--ink);background:rgba(37,99,235,.04)}
+.toggle-pill.active{background:linear-gradient(135deg,rgba(14,165,233,.14),rgba(37,99,235,.14));color:var(--gold);font-weight:600;border-color:rgba(37,99,235,.4);box-shadow:0 2px 8px rgba(37,99,235,.14)}
+.toggle-pill.disabled{opacity:.5;cursor:not-allowed}
+.toggle-pill.disabled:hover{border-color:var(--line);color:var(--ink-3);background:var(--bg-sunken)}
+.kb-badge{
+  font-family:var(--mono);font-size:10px;font-weight:700;min-width:15px;height:15px;padding:0 4px;
+  border-radius:8px;display:grid;place-items:center;line-height:1;background:rgba(37,99,235,.16);color:var(--gold);
+}
+.toggle-pill.active .kb-badge{background:rgba(255,255,255,.92)}
+.kb-caret{transition:transform .2s}
+.toggle-pill.open .kb-caret{transform:rotate(180deg)}
+.composer-spacer{flex:1}
+.model-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-3);font-weight:500;padding:0 4px}
+.model-pill select{
+  border:1px solid var(--line);border-radius:14px;background:var(--bg-sunken);
+  font-size:11.5px;color:var(--ink-3);padding:5px 8px;max-width:190px;cursor:pointer;
+}
+.composer-input{display:flex;align-items:flex-end;padding:8px 10px;gap:10px}
+.composer-input textarea{
+  flex:1;border:none;outline:none;background:none;font-family:var(--sans);font-size:13.5px;
+  line-height:1.6;color:var(--ink);resize:none;max-height:120px;min-height:24px;
+}
+.composer-input textarea::placeholder{color:var(--muted-2)}
+.send-btn{
+  width:38px;height:38px;border-radius:10px;background:var(--grad-brand);display:grid;place-items:center;
+  color:#fff;box-shadow:0 4px 14px rgba(37,99,235,.4),inset 0 1px 0 rgba(255,255,255,.35);
+  transition:all .2s var(--ease-spring);flex-shrink:0;
+}
+.send-btn:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(37,99,235,.5),inset 0 1px 0 rgba(255,255,255,.4)}
+.send-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.send-btn.stop{background:linear-gradient(135deg,#DC2626,#B91C1C);box-shadow:0 4px 14px rgba(220,38,38,.4)}
+.composer-hint{max-width:780px;margin:8px auto 0;display:flex;justify-content:space-between;font-size:11px;color:var(--muted-2)}
+.composer-hint kbd{font-family:var(--mono);font-size:10px;padding:1px 5px;border-radius:3px;background:var(--bg-sunken);border:1px solid var(--line)}
+
+/* ── KB 多选 popover ── */
+.kb-select{display:inline-flex;position:relative}
+.kb-popover{position:fixed;inset:0;z-index:110;display:none}
+.kb-popover.open{display:block}
+.kb-pop-overlay{position:absolute;inset:0;background:transparent}
+.kb-pop-panel{
+  position:absolute;width:316px;background:var(--bg-elevated);border:1px solid var(--line);
+  border-radius:var(--r-2xl);box-shadow:0 18px 44px rgba(15,23,42,.20),0 6px 16px rgba(15,23,42,.10);
+  overflow:hidden;animation:kbPopIn .18s cubic-bezier(.16,1,.3,1);
+}
+@keyframes kbPopIn{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.kb-pop-head{display:flex;align-items:baseline;justify-content:space-between;padding:12px 14px 10px;border-bottom:1px solid var(--line-soft);background:linear-gradient(135deg,rgba(37,99,235,.05),rgba(124,58,237,.04))}
+.kb-pop-title{font-family:var(--serif);font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.3px}
+.kb-pop-sub{font-size:10.5px;color:var(--muted)}
+.kb-pop-body{padding:6px;display:flex;flex-direction:column;gap:2px;max-height:300px;overflow-y:auto}
+.kb-opt{
+  display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border-radius:9px;
+  border:1px solid transparent;background:transparent;cursor:pointer;transition:all .15s;text-align:left;
+}
+.kb-opt:hover{background:var(--bg-sunken)}
+.kb-opt-check{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--line-strong);flex-shrink:0;position:relative;transition:all .15s;background:var(--bg-elevated)}
+.kb-opt.active .kb-opt-check{background:linear-gradient(135deg,var(--gold),var(--violet));border-color:transparent;box-shadow:0 2px 6px rgba(37,99,235,.3)}
+.kb-opt.active .kb-opt-check::after{
+  content:"";position:absolute;left:4px;top:1px;width:5px;height:9px;
+  border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);
+}
+.kb-opt-ic{
+  width:24px;height:24px;border-radius:7px;flex-shrink:0;display:grid;place-items:center;
+  color:#fff;font-size:11.5px;font-weight:700;font-family:var(--serif);
+  box-shadow:0 2px 6px rgba(15,23,42,.18),inset 0 1px 0 rgba(255,255,255,.25);
+}
+.ic-personal{background:linear-gradient(135deg,#0EA5E9,#2563EB)}
+.ic-team{background:linear-gradient(135deg,#7C3AED,#A855F7)}
+.ic-public{background:linear-gradient(135deg,#059669,#0EA5E9)}
+.ic-shared{background:linear-gradient(135deg,#D97706,#DC2626)}
+.kb-opt-name{flex:1;font-size:12.5px;color:var(--ink);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kb-opt-count{font-family:var(--mono);font-size:11px;color:var(--muted);padding:2px 8px;border-radius:9px;background:var(--bg-sunken)}
+.kb-opt.active .kb-opt-count{color:var(--gold);background:rgba(37,99,235,.10)}
+.kb-pop-foot{display:flex;align-items:center;gap:2px;padding:9px 10px 9px 12px;border-top:1px solid var(--line-soft)}
+.kb-link{background:none;border:none;cursor:pointer;font-size:11.5px;color:var(--muted);padding:4px 7px;border-radius:6px;transition:all .15s;font-weight:500}
+.kb-link:hover{color:var(--gold);background:rgba(37,99,235,.06)}
+.kb-foot-sep{color:var(--line-strong);font-size:10px;margin:0 1px}
+.kb-foot-spacer{flex:1}
+.kb-done{
+  background:linear-gradient(135deg,var(--cyan),var(--gold));color:#fff;border:none;cursor:pointer;
+  font-size:11.5px;font-weight:600;padding:5px 16px;border-radius:8px;box-shadow:0 2px 8px rgba(37,99,235,.25);transition:all .15s;
+}
+.kb-done:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,.32)}
+
+/* ── 右栏 ── */
+.aside{background:var(--bg-elevated);border-left:1px solid var(--line);overflow-y:auto;display:flex;flex-direction:column}
+.aside-section{padding:18px 20px;border-bottom:1px solid var(--line)}
+.aside-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.aside-title h3{font-family:var(--serif);font-size:13px;font-weight:600;color:var(--ink);letter-spacing:.3px}
+.aside-title .count{font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--bg-sunken);padding:2px 7px;border-radius:8px}
+.kb-overview{
+  background:radial-gradient(circle at 80% 20%,rgba(124,58,237,.18) 0%,transparent 50%),linear-gradient(135deg,#0B1220 0%,#1E2A44 100%);
+  border-radius:13px;padding:16px;color:#E8EDF7;position:relative;overflow:hidden;
+  border:1px solid rgba(37,99,235,.35);box-shadow:0 8px 24px rgba(15,23,42,.22);margin-bottom:6px;
+}
+.kb-overview::after{content:"";position:absolute;left:0;top:0;bottom:0;width:2.5px;background:linear-gradient(180deg,var(--cyan),var(--gold),var(--violet));box-shadow:0 0 10px rgba(37,99,235,.5)}
+.kb-overview-head{display:flex;align-items:center;gap:11px;margin-bottom:15px;position:relative;z-index:1}
+.kb-overview-ic{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--cyan),var(--gold));display:grid;place-items:center;color:#fff;flex-shrink:0;box-shadow:0 3px 10px rgba(37,99,235,.5)}
+.kb-overview-name{font-family:var(--serif);font-size:13.5px;font-weight:600;color:#fff;letter-spacing:.3px}
+.kb-overview-sub{font-size:9.5px;color:#7DD3FC;letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;font-weight:700}
+.kb-overview-stats{display:flex;align-items:baseline;gap:14px;position:relative;z-index:1}
+.kb-stat-num{font-family:var(--mono);font-size:24px;font-weight:700;color:#fff;line-height:1.1}
+.kb-stat-label{font-size:10.5px;color:#94A3B8;margin-top:4px;letter-spacing:.4px}
+.source-item{
+  display:flex;gap:12px;padding:13px 14px;border-radius:11px;cursor:pointer;transition:all .22s var(--ease-out);
+  margin-bottom:9px;background:linear-gradient(180deg,#FFFFFF 0%,#FCFDFE 100%);border:1px solid var(--line);
+  position:relative;text-decoration:none;
+}
+.source-item::after{
+  content:"";position:absolute;left:0;top:14px;bottom:14px;width:2px;
+  background:linear-gradient(180deg,var(--cyan),var(--gold),var(--violet));border-radius:0 2px 2px 0;
+  opacity:0;transform:scaleY(.4);transition:all .25s var(--ease-out);
+}
+.source-item:hover{border-color:rgba(37,99,235,.4);box-shadow:0 6px 18px rgba(37,99,235,.1);transform:translateY(-2px)}
+.source-item:hover::after{opacity:1;transform:scaleY(1)}
+.source-num{
+  width:24px;height:24px;border-radius:6px;flex-shrink:0;display:grid;place-items:center;
+  font-family:var(--mono);font-size:11px;font-weight:700;color:#fff;
+  background:linear-gradient(135deg,var(--cyan),var(--gold));box-shadow:0 2px 8px rgba(37,99,235,.35);
+}
+.source-meta{flex:1;min-width:0}
+.source-name{
+  font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:6px;line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;letter-spacing:.15px;
+}
+.source-info{font-size:10.5px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.src-type{font-family:var(--mono);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;color:#fff;letter-spacing:.3px;background:linear-gradient(135deg,#60A5FA,#2563EB);text-transform:uppercase}
+.aside-empty{font-size:12px;color:var(--muted-2);text-align:center;padding:18px 0}
+
+@media (max-width:1080px){.chat-shell{grid-template-columns:232px 1fr}.aside{display:none}}
+@media (max-width:720px){
+  .chat-shell{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .chat-header{padding:12px 14px}
+  .composer-wrap{padding:12px 14px 14px}
+  .msg-wrap{padding:0 14px}
+  .chat-title .scope-tag{max-width:160px}
+}
+</style>
+
+<div class="chat-shell">
+
+  <!-- 侧栏：新对话 + 历史 -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <button class="new-chat-btn" onclick="newSession()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新对话
+      </button>
+    </div>
+    <div class="sidebar-section" style="flex:1">
+      <div class="sidebar-label">历史记录</div>
+      <div class="history-list" id="sesslist"></div>
+    </div>
+  </aside>
+
+  <!-- 主区 -->
+  <main class="chat-main">
+    <div class="chat-header">
+      <div class="chat-title">
+        <h1>智能问答</h1>
+        <span class="scope-tag" id="scopeTag" title="当前检索的知识库范围，可在输入框中调整">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <span id="scopeTagText">未选择知识库</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="conversation" id="conversation">
+      <div class="msg-wrap welcome" id="welcome">
+        <div class="welcome-emblem">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+            <path d="M12 3 L20 12 L12 21 L4 12 Z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M8 14 L11 11 L13 13 L16 9" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="16" cy="9" r="1.1" fill="#fff"/>
+          </svg>
+        </div>
+        <h2><span id="greet"></span>，<span class="accent">今天研究什么？</span></h2>
+        <p>基于你被授权的知识库进行检索问答，回答附引用来源；权限由平台侧逐请求裁决。</p>
+      </div>
+      <div id="messages" style="display:contents"></div>
+    </div>
+
+    <div class="composer-wrap">
+      <div class="composer">
+        <div class="composer-tools">
+          <button class="toggle-pill disabled" type="button" title="WeKnora 原生能力，门户 POC 未接入">
+            <span class="tp-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2z"/></svg></span>
+            深度思考
+          </button>
+          <button class="toggle-pill disabled" type="button" title="WeKnora 原生能力，门户 POC 未接入">
+            <span class="tp-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+            联网搜索
+          </button>
+          <div class="kb-select">
+            <button class="toggle-pill kb-trigger" id="kbTrigger" type="button" onclick="toggleKbPopover(event)" aria-expanded="false">
+              <span class="tp-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>
+              知识库
+              <span class="kb-badge" id="kbBadge" style="display:none">0</span>
+              <svg class="kb-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="kb-popover" id="kbPopover">
+              <div class="kb-pop-overlay" onclick="closeKbPopover()"></div>
+              <div class="kb-pop-panel">
+                <div class="kb-pop-head"><div class="kb-pop-title">选择知识库</div><div class="kb-pop-sub">支持多选</div></div>
+                <div class="kb-pop-body" id="kbPopBody"></div>
+                <div class="kb-pop-foot">
+                  <button class="kb-link" onclick="kbSelectAll(true)">全选</button>
+                  <span class="kb-foot-sep">·</span>
+                  <button class="kb-link" onclick="kbSelectAll(false)">清空</button>
+                  <div class="kb-foot-spacer"></div>
+                  <button class="kb-done" onclick="closeKbPopover()">完成</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="composer-spacer"></div>
+          <div class="model-pill" title="跨空间问答需携带调用方空间的对话模型（WeKnora 语义）">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+            <select id="modelsel"><option value="">加载中…</option></select>
+          </div>
+        </div>
+        <div class="composer-input">
+          <textarea id="chatq" rows="1" placeholder="输入问题，知识库随时待命"></textarea>
+          <button class="send-btn" id="sendBtn" title="发送 (Enter)" onclick="sendChat()">
+            <svg id="sendIco" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="composer-hint">
+        <span>回答基于受控知识库生成，关键结论请以引用原文为准</span>
+        <span><kbd>Enter</kbd> 发送 · <kbd>Shift</kbd>+<kbd>Enter</kbd> 换行</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- 右栏：范围概览 + 参考资料 -->
+  <aside class="aside">
+    <div class="aside-section">
+      <div class="kb-overview">
+        <div class="kb-overview-head">
+          <div class="kb-overview-ic">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          </div>
+          <div>
+            <div class="kb-overview-name">检索范围</div>
+            <div class="kb-overview-sub">Knowledge Scope</div>
+          </div>
+        </div>
+        <div class="kb-overview-stats">
+          <div><div class="kb-stat-num" id="scopeKbNum">0</div><div class="kb-stat-label">知识库</div></div>
+          <div><div class="kb-stat-num" id="scopeDocNum">0</div><div class="kb-stat-label">文档</div></div>
+          <div><div class="kb-stat-num" id="scopeTotalNum">0</div><div class="kb-stat-label">全部可用</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="aside-section" style="flex:1">
+      <div class="aside-title"><h3>参考资料</h3><span class="count" id="srcCount">0</span></div>
+      <div id="sources"><div class="aside-empty">发起提问后，引用来源将显示在这里</div></div>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+const MY_NAME = '{{UserName}}', MY_AVATAR = '{{Avatar}}';
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let curSess = null, SESSIONS = [], KBS = [], busy = false, curAbort = null;
+
+async function jget(u){ const r=await fetch(u); const j=await r.json().catch(()=>({success:false})); if(!r.ok||j.success===false) throw new Error(j.error?.message||('HTTP '+r.status)); return j.data; }
+async function japi(m,u,b){
+  const r=await fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||j.success===false) throw new Error(j.error?.message||('HTTP '+r.status));
+  return j.data;
+}
+function classify(it){
+  if (it.shared) return it.space_type==='all' ? 'public' : 'shared';
+  if (it.space_type==='personal') return 'personal';
+  if (it.space_type==='all') return 'public';
+  return 'team';
+}
+const GCHAR = {personal:'个', team:'团', public:'公', shared:'享'};
+
+// 问候语
+(function(){
+  const h = new Date().getHours();
+  document.getElementById('greet').textContent = h<6?'夜深了':h<12?'上午好':h<18?'下午好':'晚上好';
+})();
+
+// textarea 自适应 + Enter 发送
+const ta = document.getElementById('chatq');
+ta.addEventListener('input', ()=>{ ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,120)+'px'; });
+ta.addEventListener('keydown', e=>{
+  if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); }
+});
+
+// ── 模型 ──
+(async () => {
+  try {
+    const models = (await jget('/api/v1/models')).filter(m=>m.type==='KnowledgeQA');
+    document.getElementById('modelsel').innerHTML = models.map(m=>`<option value="${esc(m.id)}">${esc(m.display_name||m.name)}</option>`).join('')
+      || '<option value="">（当前空间无可用对话模型）</option>';
+  } catch(e){ document.getElementById('modelsel').innerHTML = '<option value="">模型加载失败</option>'; }
+})();
+
+// ── 知识库多选（数据来自 portal 聚合，服务端已按权限裁决） ──
+async function loadKbs(){
+  try {
+    KBS = await jget('/api/v1/portal/knowledge-bases');
+  } catch(e){ KBS = []; }
+  document.getElementById('kbPopBody').innerHTML = KBS.map(it=>`
+    <button class="kb-opt" type="button" data-kb="${esc(it.id)}" onclick="toggleKbOpt(this)">
+      <span class="kb-opt-check"></span>
+      <span class="kb-opt-ic ic-${classify(it)}">${GCHAR[classify(it)]||'库'}</span>
+      <span class="kb-opt-name" title="${esc(it.tenant_name||'')} · ${esc(it.name)}">${esc(it.name)}</span>
+      <span class="kb-opt-count">${it.knowledge_count??0}</span>
+    </button>`).join('') || '<div class="aside-empty">暂无可见知识库</div>';
+  updateKbUi();
+}
+function selKbIds(){ return [...document.querySelectorAll('.kb-opt.active')].map(o=>o.dataset.kb); }
+function toggleKbOpt(btn){ btn.classList.toggle('active'); updateKbUi(); }
+function kbSelectAll(on){
+  document.querySelectorAll('.kb-pop-body .kb-opt').forEach(o=>o.classList.toggle('active', on));
+  updateKbUi();
+}
+function toggleKbPopover(e){
+  e.stopPropagation();
+  const pop = document.getElementById('kbPopover'), trg = document.getElementById('kbTrigger');
+  if (pop.classList.contains('open')){ closeKbPopover(); return; }
+  const panel = pop.querySelector('.kb-pop-panel'), r = trg.getBoundingClientRect();
+  panel.style.left = Math.max(8, Math.min(r.left, window.innerWidth-324))+'px';
+  panel.style.bottom = (window.innerHeight-r.top+8)+'px';
+  pop.classList.add('open'); trg.classList.add('open'); trg.setAttribute('aria-expanded','true');
+}
+function closeKbPopover(){
+  document.getElementById('kbPopover').classList.remove('open');
+  const trg = document.getElementById('kbTrigger'); trg.classList.remove('open'); trg.setAttribute('aria-expanded','false');
+}
+document.addEventListener('click', e=>{ if (!e.target.closest('.kb-select')) closeKbPopover(); });
+document.addEventListener('keydown', e=>{ if (e.key==='Escape') closeKbPopover(); });
+document.querySelector('#kbPopover .kb-pop-panel').addEventListener('click', e=>e.stopPropagation());
+
+function updateKbUi(){
+  const n = selKbIds().length;
+  const trg = document.getElementById('kbTrigger'), badge = document.getElementById('kbBadge');
+  trg.classList.toggle('active', n>0);
+  badge.style.display = n>0?'':'none'; badge.textContent = n;
+  const names = [...document.querySelectorAll('.kb-pop-body .kb-opt.active')].map(o=>o.querySelector('.kb-opt-name').textContent);
+  const tag = document.getElementById('scopeTag'), txt = document.getElementById('scopeTagText');
+  txt.textContent = n===0 ? '未选择知识库' : n===1 ? names[0] : n===2 ? names.join(' + ') : names[0]+' + '+(n-1)+' 个知识库';
+  tag.classList.toggle('empty', n===0);
+  tag.title = n ? '当前检索范围：'+names.join('、') : '尚未选择知识库';
+  document.getElementById('scopeKbNum').textContent = n;
+  document.getElementById('scopeDocNum').textContent = KBS.filter(k=>selKbIds().includes(k.id)).reduce((s,k)=>s+(k.knowledge_count||0),0);
+  document.getElementById('scopeTotalNum').textContent = KBS.length;
+}
+
+// ── 会话列表 ──
+function fmtSessionTime(t){
+  if (!t) return '';
+  const d = new Date(t), now = new Date();
+  const sameDay = d.toDateString()===now.toDateString();
+  if (sameDay) return '今天 '+d.toTimeString().slice(0,5);
+  const y = new Date(now); y.setDate(y.getDate()-1);
+  if (d.toDateString()===y.toDateString()) return '昨天 '+d.toTimeString().slice(0,5);
+  return `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+async function loadSessions(){
+  try {
+    SESSIONS = (await jget('/api/v1/sessions'))||[];
+  } catch(e){ SESSIONS = []; }
+  renderSessions();
+}
+function renderSessions(){
+  const pinSvg='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>';
+  const delSvg='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+  const sorted = [...SESSIONS].sort((a,b)=>(b.is_pinned?1:0)-(a.is_pinned?1:0)||new Date(b.updated_at||0)-new Date(a.updated_at||0));
+  document.getElementById('sesslist').innerHTML = sorted.map(s=>{
+    const label = s.title || (s.first_q ? s.first_q : (s.id||'').slice(0,10)+'…');
+    return `<div class="history-item ${s.is_pinned?'pinned':''} ${s.id===curSess?'active':''}" data-sid="${esc(s.id)}">
+      ${s.is_pinned?'<span class="pin-flag">置顶</span>':''}${esc(label)}
+      <span class="time">${fmtSessionTime(s.updated_at)}</span>
+      <span class="hist-actions">
+        <button class="hist-act pin" title="${s.is_pinned?'取消置顶':'置顶'}">${pinSvg}</button>
+        <button class="hist-act del" title="删除会话">${delSvg}</button>
+      </span>
+    </div>`;
+  }).join('') || '<div class="aside-empty" style="padding:8px 0">暂无历史会话</div>';
+  document.getElementById('sesslist').querySelectorAll('.history-item').forEach(el=>{
+    el.addEventListener('click', ()=>openSession(el.dataset.sid));
+    el.querySelector('.pin').addEventListener('click', async e=>{
+      e.stopPropagation();
+      const s = SESSIONS.find(x=>x.id===el.dataset.sid);
+      try { await japi(s&&s.is_pinned?'DELETE':'POST', `/api/v1/sessions/${el.dataset.sid}/pin`); await loadSessions(); } catch(err){ alert('操作失败：'+err.message); }
+    });
+    el.querySelector('.del').addEventListener('click', async e=>{
+      e.stopPropagation();
+      if (!confirm('确认删除该会话？')) return;
+      el.classList.add('removing');
+      try { await japi('DELETE', `/api/v1/sessions/${el.dataset.sid}`); if (el.dataset.sid===curSess){ curSess=null; document.getElementById('messages').innerHTML=''; document.getElementById('welcome').style.display=''; } await loadSessions(); }
+      catch(err){ el.classList.remove('removing'); alert('删除失败：'+err.message); }
+    });
+  });
+}
+async function newSession(){
+  try {
+    const s = await japi('POST','/api/v1/sessions',{});
+    curSess = s.id;
+    document.getElementById('messages').innerHTML = '';
+    document.getElementById('welcome').style.display = '';
+    renderSources(null);
+    renderSessions();
+  } catch(e){ alert('建会话失败：'+e.message); }
+}
+
+// ── 打开会话：拉历史 + 恢复 KB 勾选/模型 ──
+async function openSession(id){
+  if (busy) return alert('请先等待当前回答完成（或点停止）');
+  curSess = id;
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('messages').innerHTML = '<div class="msg-wrap"><div class="state"><h3>正在加载会话历史…</h3></div></div>';
+  renderSessions();
+  let msgs = [];
+  try {
+    msgs = (await jget(`/api/v1/messages/${id}/load?limit=50`))||[];
+    const box = document.getElementById('messages');
+    box.innerHTML = msgs.length ? msgs.map(m=>histMsgHtml(m)).join('')
+      : '<div class="msg-wrap"><div class="state"><h3>（空会话）</h3><p>直接提问即可，历史消息将保存在此会话</p></div></div>';
+    box.scrollTop = 0;
+    // 记住首问用于侧栏标签
+    const firstQ = (msgs.find(m=>m.role==='user')||{}).content;
+    const s0 = SESSIONS.find(x=>x.id===id);
+    if (s0 && !s0.title && firstQ){ s0.first_q = String(firstQ).slice(0,24); renderSessions(); }
+  } catch(e){
+    document.getElementById('messages').innerHTML = `<div class="msg-wrap"><div class="state error"><div class="state-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><h3>历史加载失败</h3><p>${esc(e.message)}</p></div></div>`;
+  }
+  // 恢复该会话上次的 KB 范围与模型（服务端 last_request_state）
+  const s = SESSIONS.find(x=>x.id===id);
+  const st = s && s.last_request_state || {};
+  if (Array.isArray(st.knowledge_base_ids)){
+    document.querySelectorAll('.kb-pop-body .kb-opt').forEach(o=>
+      o.classList.toggle('active', st.knowledge_base_ids.includes(o.dataset.kb)));
+    updateKbUi();
+  }
+  if (st.model_id){
+    const sel = document.getElementById('modelsel');
+    if ([...sel.options].some(o=>o.value===st.model_id)) sel.value = st.model_id;
+  }
+  // 右栏显示最近一条带引用的回答
+  const lastRefs = [...msgs].reverse().find(m=>m.role==='assistant' && m.knowledge_references?.length);
+  if (lastRefs) renderSources(lastRefs.knowledge_references); else renderSources(null);
+}
+
+function refsChipsHtml(refs){
+  if (!refs || !refs.length) return '';
+  const chip = (r,i)=>{
+    const label = esc((r.knowledge_title||r.knowledge_filename||'未知来源').slice(0,22));
+    const inner = `<span class="src">${i+1}</span>${label}`;
+    return r.knowledge_id
+      ? `<a class="cite-chip" href="/api/v1/knowledge/${esc(r.knowledge_id)}/preview" target="_blank" title="${esc(r.knowledge_title||r.knowledge_filename||'')}">${inner}</a>`
+      : `<span class="cite-chip" title="${esc(r.knowledge_title||'')}">${inner}</span>`;
+  };
+  return `<div class="citations"><span class="cite-label">参考来源：</span>${
+    refs.slice(0,8).map(chip).join('')}${
+    refs.length>8?`<span class="cite-label">…共 ${refs.length} 条</span>`:''}</div>`;
+}
+function histMsgHtml(m){
+  const refs = m.knowledge_references||[];
+  if (m.role==='user'){
+    return `<div class="msg-wrap msg"><div class="msg-row user">
+      <div class="msg-avatar human">${esc(MY_AVATAR)}</div>
+      <div class="msg-content"><div class="msg-name"><span>${esc(MY_NAME||'我')}</span></div>
+      <div class="msg-bubble">${esc(m.content)}</div></div>
+    </div></div>`;
+  }
+  return `<div class="msg-wrap msg"><div class="msg-row ai">
+    <div class="msg-avatar ai">智</div>
+    <div class="msg-content">
+      <div class="msg-name"><span>知识库问答助手</span>${refs.length?`<span class="role">已引用 ${refs.length} 份来源</span>`:''}</div>
+      <div class="msg-bubble">${esc(m.content)}${refsChipsHtml(refs)}</div>
+    </div>
+  </div></div>`;
+}
+
+// ── 右栏参考资料 ──
+function renderSources(refs){
+  const box = document.getElementById('sources');
+  document.getElementById('srcCount').textContent = refs?refs.length:0;
+  if (!refs || !refs.length){
+    box.innerHTML = '<div class="aside-empty">发起提问后，引用来源将显示在这里</div>';
+    return;
+  }
+  box.innerHTML = refs.slice(0,10).map((r,i)=>{
+    const ext = (r.knowledge_filename||'').split('.').pop()||'doc';
+    const href = r.knowledge_id ? `/api/v1/knowledge/${esc(r.knowledge_id)}/preview` : null;
+    const inner = `<div class="source-num">${i+1}</div>
+      <div class="source-meta">
+        <div class="source-name">${esc(r.knowledge_title||r.knowledge_filename||'未知来源')}</div>
+        <div class="source-info"><span class="src-type">${esc(ext)}</span><span>知识库</span>${r.score?`<span class="sep">·</span><span>score ${Number(r.score).toFixed(3)}</span>`:''}</div>
+      </div>`;
+    return href ? `<a class="source-item" href="${href}" target="_blank">${inner}</a>` : `<div class="source-item">${inner}</div>`;
+  }).join('');
+}
+
+// ── 发送 / 流式接收 / 停止 ──
+function setBusy(on){
+  busy = on;
+  const btn = document.getElementById('sendBtn'), ico = document.getElementById('sendIco');
+  btn.classList.toggle('stop', on);
+  btn.title = on?'停止生成':'发送 (Enter)';
+  ico.innerHTML = on
+    ? '<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/>'
+    : '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>';
+  ta.disabled = false; // 生成中允许继续输入，仅按钮切换
+}
+async function sendChat(){
+  if (busy){ stopGen(); return; }
+  const q = ta.value.trim(); if (!q) return;
+  const modelId = document.getElementById('modelsel').value;
+  if (!modelId){ alert('请先选择对话模型（当前空间可能未配置 KnowledgeQA 模型）'); return; }
+  if (!curSess) await newSession();
+  if (!curSess) return;
+  document.getElementById('welcome').style.display = 'none';
+  const conv = document.getElementById('conversation');
+  const box = document.getElementById('messages');
+  box.insertAdjacentHTML('beforeend', `
+    <div class="msg-wrap msg"><div class="msg-row user">
+      <div class="msg-avatar human">${esc(MY_AVATAR)}</div>
+      <div class="msg-content"><div class="msg-name"><span>${esc(MY_NAME||'我')}</span></div>
+      <div class="msg-bubble">${esc(q)}</div></div>
+    </div></div>
+    <div class="msg-wrap msg" id="curTurn"><div class="msg-row ai">
+      <div class="msg-avatar ai">智</div>
+      <div class="msg-content">
+        <div class="msg-name"><span>知识库问答助手</span><span class="role" id="turnState">检索知识库中…</span></div>
+        <div class="msg-bubble" id="ans"><span class="cursor"></span></div>
+      </div>
+    </div></div>`);
+  ta.value=''; ta.style.height='auto';
+  conv.scrollTop = conv.scrollHeight;
+  setBusy(true);
+  curAbort = new AbortController();
+  const ans = document.getElementById('ans'), stateEl = document.getElementById('turnState');
+  // WeKnora DTO 字段为 query；summary_model_id 取调用方空间模型（跨空间聊天关键参数）
+  let text='', refs=null, sawThinking=false;
+  try {
+    const resp = await fetch(`/api/v1/knowledge-chat/${curSess}`, {
+      method:'POST', headers:{'Content-Type':'application/json'}, signal: curAbort.signal,
+      body: JSON.stringify({query:q, knowledge_base_ids:selKbIds(), summary_model_id:modelId}),
+    });
+    if (!resp.ok || !resp.body){
+      let em='HTTP '+resp.status; try{const j=await resp.json(); em=j.error?.message||em;}catch{}
+      throw new Error(em);
+    }
+    const reader = resp.body.getReader(); const dec = new TextDecoder();
+    let buf='';
+    while (true){
+      const {done, value} = await reader.read(); if (done) break;
+      buf += dec.decode(value, {stream:true});
+      let idx;
+      while ((idx = buf.indexOf('\n')) >= 0){
+        const line = buf.slice(0,idx).trim(); buf = buf.slice(idx+1);
+        if (!line.startsWith('data:')) continue;
+        let ev; try { ev = JSON.parse(line.slice(5)); } catch { continue; }
+        const t = ev.response_type || ev.type;
+        if (t==='answer' && ev.content){ if(stateEl.textContent!=='生成中…')stateEl.textContent='生成中…'; text += ev.content; ans.textContent = text; }
+        else if (t==='thinking' && ev.content){ sawThinking=true; stateEl.textContent='深度思考中…'; ans.textContent='💭 '+ev.content; }
+        else if (t==='references'){ refs = ev.references || ev.data || refs; }
+        else if (t==='error'){ ans.textContent += '\n[错误] ' + (ev.content||ev.error||''); }
+      }
+      conv.scrollTop = conv.scrollHeight;
+    }
+    if (!text && !sawThinking) ans.textContent = ans.textContent || '（无内容返回）';
+  } catch(e){
+    if (e.name==='AbortError'){ ans.textContent = text + '\n\n⏹ 已停止生成'; }
+    else { ans.textContent = (text?text+'\n\n':'') + '❌ 请求失败：'+e.message; }
+  } finally {
+    const cursor = ans.querySelector('.cursor'); if (cursor) cursor.remove();
+    if (stateEl) stateEl.textContent = refs && refs.length ? `已引用 ${refs.length} 份来源` : '完成';
+    if (refs && refs.length){
+      ans.insertAdjacentHTML('beforeend', refsChipsHtml(refs));
+      renderSources(refs);
+    }
+    setBusy(false); curAbort = null;
+    conv.scrollTop = conv.scrollHeight;
+    loadSessions(); // 标题/时间服务端可能已更新
+  }
+}
+async function stopGen(){
+  if (curAbort) curAbort.abort();
+  if (curSess){ try { await fetch(`/api/v1/sessions/${curSess}/stop`, {method:'POST'}); } catch{} }
+}
+
+// 初始化
+loadKbs().then(loadSessions);
+</script>
+{% include "_end.html" %}
